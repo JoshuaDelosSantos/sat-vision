@@ -24,4 +24,9 @@ A 3D web app showing Sentinel-2A's real-time/historical orbit on a CesiumJS glob
 - Frontend red "!" markers rendered at satellite position for each acquisition
 - Acquisition count badge and click-to-inspect info box on markers
 
-### Phase 4 — Image Visualisation 🔲
+### Phase 4 — Image Visualisation ✅
+- `GET /api/imagery/{item_id}/tile-url` endpoint returning signed Planetary Computer tile URLs
+- Side panel (ImagePanel) with thumbnail, metadata, and "View on Globe" button
+- Click "!" marker → panel slides open with acquisition details
+- "View on Globe" drapes Sentinel-2 true-colour imagery onto the Cesium globe
+- Draped layers list with visibility toggle and remove controls
