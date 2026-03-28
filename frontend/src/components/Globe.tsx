@@ -8,9 +8,7 @@ import {
   defined,
 } from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
-import { useOrbit } from "../hooks/useOrbit";
 import { useAcquisitions } from "../hooks/useAcquisitions";
-import { renderOrbit, clearOrbit } from "./OrbitRenderer";
 import {
   renderAcquisitionMarkers,
   clearAcquisitionMarkers,
@@ -36,7 +34,6 @@ const Globe = forwardRef<GlobeHandle, GlobeProps>(function Globe(
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Viewer | null>(null);
-  const { orbit, error: orbitError, loading: orbitLoading } = useOrbit();
   const {
     data: acqData,
     error: acqError,
@@ -111,21 +108,6 @@ const Globe = forwardRef<GlobeHandle, GlobeProps>(function Globe(
     };
   }, [onMarkerClick]);
 
-  // Render orbit data when it arrives
-  useEffect(() => {
-    const viewer = viewerRef.current;
-    if (!viewer || viewer.isDestroyed()) return;
-
-    if (orbit) {
-      renderOrbit(viewer, orbit);
-    }
-    return () => {
-      if (viewer && !viewer.isDestroyed()) {
-        clearOrbit(viewer);
-      }
-    };
-  }, [orbit]);
-
   // Render acquisition markers when data arrives
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -141,8 +123,8 @@ const Globe = forwardRef<GlobeHandle, GlobeProps>(function Globe(
     };
   }, [acqData]);
 
-  const loading = orbitLoading || acqLoading;
-  const error = orbitError || acqError;
+  const loading = acqLoading;
+  const error = acqError;
 
   const getViewer = useCallback(() => viewerRef.current, []);
 
@@ -152,7 +134,6 @@ const Globe = forwardRef<GlobeHandle, GlobeProps>(function Globe(
 
       <DashboardHUD
         getViewer={getViewer}
-        orbit={orbit}
         acquisitions={acqData}
         drapedCount={drapedCount}
       />
@@ -172,7 +153,7 @@ const Globe = forwardRef<GlobeHandle, GlobeProps>(function Globe(
             zIndex: 20,
           }}
         >
-          {orbitLoading ? "Loading orbit…" : "Loading acquisitions…"}
+          Loading acquisitions…
         </div>
       )}
       {error && (
