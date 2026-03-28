@@ -2,11 +2,10 @@
 
 import { useEffect, useState, useRef, useCallback, type CSSProperties } from "react";
 import { Viewer, Math as CesiumMath } from "cesium";
-import type { OrbitData, AcquisitionsData } from "../services/api";
+import type { AcquisitionsData } from "../services/api";
 
 interface DashboardHUDProps {
   getViewer: () => Viewer | null;
-  orbit: OrbitData | null;
   acquisitions: AcquisitionsData | null;
   drapedCount: number;
 }
@@ -19,7 +18,6 @@ interface CameraState {
 
 export default function DashboardHUD({
   getViewer,
-  orbit,
   acquisitions,
   drapedCount,
 }: DashboardHUDProps) {
@@ -48,14 +46,18 @@ export default function DashboardHUD({
     return () => cancelAnimationFrame(rafRef.current);
   }, [tick]);
 
+  const passCount = acquisitions
+    ? new Set(acquisitions.acquisitions.map((a) => a.datetime.slice(0, 16))).size
+    : 0;
+
   return (
     <>
       {/* ── Top-left: Mission ── */}
       <div style={{ ...panelBase, top: 8, left: 8 }}>
         <div style={titleStyle}>SAT-VISION</div>
-        <Row label="Satellite" value={orbit?.name ?? "—"} />
-        <Row label="NORAD" value={orbit ? String(orbit.norad_id) : "—"} />
-        <Row label="Orbit pts" value={orbit ? String(orbit.positions.length) : "—"} />
+        <Row label="Satellite" value="Sentinel-2A" />
+        <Row label="NORAD" value="40697" />
+        <Row label="Passes" value={acquisitions ? String(passCount) : "—"} />
       </div>
 
       {/* ── Top-right: Clock ── */}
