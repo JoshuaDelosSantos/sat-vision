@@ -9,7 +9,6 @@ from fastapi import APIRouter, HTTPException, Query
 from app.config import REGION_BBOX, STAC_API_URL, STAC_COLLECTION
 from app.models.schemas import Acquisition, AcquisitionsResponse, TileURLResponse
 from app.services.stac import fetch_acquisitions
-from app.services.propagator import propagate_at
 
 router = APIRouter(prefix="/api")
 
@@ -28,24 +27,24 @@ def get_acquisitions(
 
     acquisitions = []
     for item in raw_items:
-        # Propagate satellite position at acquisition time
-        dt = datetime.fromisoformat(item["datetime"]).replace(tzinfo=timezone.utc)
-        try:
-            pos = propagate_at(dt)
-        except (ValueError, Exception):
-            # Skip items where propagation fails (TLE too far from epoch)
+        # Use the image footprint bbox centre for position (ground truth).
+        # SGP4 propagation drifts too far from TLE epoch over a 30-day window.
+        bbox = item.get("bbox")
+        if not bbox or len(bbox) < 4:
             continue
+        centre_lon = (bbox[0] + bbox[2]) / 2
+        centre_lat = (bbox[1] + bbox[3]) / 2
 
         acquisitions.append(Acquisition(
             item_id=item["item_id"],
             datetime=item["datetime"],
-            lat_deg=pos["lat_deg"],
-            lon_deg=pos["lon_deg"],
-            alt_km=pos["alt_km"],
+            lat_deg=centre_lat,
+            lon_deg=centre_lon,
+            alt_km=0.0,
             cloud_cover_pct=item.get("cloud_cover_pct"),
             thumbnail_url=item.get("thumbnail_url"),
             footprint=item.get("footprint"),
-            bbox=item.get("bbox"),
+            bbox=bbox,
         ))
 
     return AcquisitionsResponse(count=len(acquisitions), acquisitions=acquisitions)
