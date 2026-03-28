@@ -1,3 +1,5 @@
+/** React hook — fetches orbit positions from the backend and manages loading/error state. */
+
 import { useEffect, useState } from "react";
 import { fetchOrbit, OrbitData } from "../services/api";
 
