@@ -4,7 +4,6 @@ import {
   Viewer,
   UrlTemplateImageryProvider,
   Rectangle,
-  Math as CesiumMath,
   ImageryLayer,
 } from "cesium";
 
@@ -23,23 +22,29 @@ export function drapeImagery(
   tileUrlTemplate: string,
   bbox: number[],
 ): DrapedLayer {
-  // Already draped — just make visible
+  const rect = Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3]);
+
+  // Already draped — just make visible and fly to it
   const existing = drapedLayers.get(itemId);
   if (existing) {
     existing.layer.show = true;
     existing.visible = true;
+    viewer.camera.flyTo({ destination: rect });
     return existing;
   }
 
   const provider = new UrlTemplateImageryProvider({
     url: tileUrlTemplate,
-    rectangle: Rectangle.fromDegrees(bbox[0], bbox[1], bbox[2], bbox[3]),
-    minimumLevel: 6,
-    maximumLevel: 14,
+    rectangle: rect,
+    minimumLevel: 0,
+    maximumLevel: 24,
     credit: "Copernicus Sentinel-2 via Microsoft Planetary Computer",
   });
 
   const layer = viewer.imageryLayers.addImageryProvider(provider);
+
+  // Fly the camera to the draped area so the user can see it
+  viewer.camera.flyTo({ destination: rect });
 
   const draped: DrapedLayer = { itemId, layer, visible: true };
   drapedLayers.set(itemId, draped);
