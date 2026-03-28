@@ -29,7 +29,6 @@ export function renderAcquisitionMarkers(
       position: Cartesian3.fromDegrees(
         acq.lon_deg,
         acq.lat_deg,
-        acq.alt_km * 1000,
       ),
       label: {
         text: "!",
