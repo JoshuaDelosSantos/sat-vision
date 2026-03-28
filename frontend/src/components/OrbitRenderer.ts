@@ -1,4 +1,4 @@
-/** Renders the orbit polyline and animated satellite marker on the Cesium viewer. */
+/** Renders the orbit polyline, ground track, and animated satellite marker on the Cesium viewer. */
 
 import {
   Viewer,
@@ -9,12 +9,13 @@ import {
   ClockRange,
   ClockStep,
   PolylineGlowMaterialProperty,
-  CallbackProperty,
+  PolylineDashMaterialProperty,
   Entity,
 } from "cesium";
 import type { OrbitData } from "../services/api";
 
 let orbitEntity: Entity | undefined;
+let groundTrackEntity: Entity | undefined;
 let satelliteEntity: Entity | undefined;
 
 /**
@@ -24,6 +25,7 @@ let satelliteEntity: Entity | undefined;
 export function renderOrbit(viewer: Viewer, data: OrbitData) {
   // Remove previous entities
   if (orbitEntity) viewer.entities.remove(orbitEntity);
+  if (groundTrackEntity) viewer.entities.remove(groundTrackEntity);
   if (satelliteEntity) viewer.entities.remove(satelliteEntity);
 
   const positions = data.positions;
@@ -32,12 +34,14 @@ export function renderOrbit(viewer: Viewer, data: OrbitData) {
   // Build SampledPositionProperty for animated satellite
   const positionProperty = new SampledPositionProperty();
   const cartesianArray: Cartesian3[] = [];
+  const groundTrackArray: Cartesian3[] = [];
 
   for (const p of positions) {
     const jd = JulianDate.fromDate(new Date(p.epoch_ms));
     const cart = Cartesian3.fromDegrees(p.lon_deg, p.lat_deg, p.alt_km * 1000);
     positionProperty.addSample(jd, cart);
     cartesianArray.push(cart);
+    groundTrackArray.push(Cartesian3.fromDegrees(p.lon_deg, p.lat_deg, 0));
   }
 
   // Static polyline for the full orbit arc
@@ -49,6 +53,19 @@ export function renderOrbit(viewer: Viewer, data: OrbitData) {
         glowPower: 0.2,
         color: Color.CYAN,
       }),
+    },
+  });
+
+  // Ground track — nadir projection of the orbit onto the surface
+  groundTrackEntity = viewer.entities.add({
+    polyline: {
+      positions: groundTrackArray,
+      width: 1.5,
+      material: new PolylineDashMaterialProperty({
+        color: Color.CYAN.withAlpha(0.4),
+        dashLength: 12,
+      }),
+      clampToGround: true,
     },
   });
 
@@ -86,10 +103,10 @@ export function renderOrbit(viewer: Viewer, data: OrbitData) {
     viewer.timeline.zoomTo(startTime, stopTime);
   }
 
-  // Fly camera to mid-point of orbit
+  // Fly camera to mid-point of ground track
   const mid = positions[Math.floor(positions.length / 2)];
   viewer.camera.flyTo({
-    destination: Cartesian3.fromDegrees(mid.lon_deg, mid.lat_deg, mid.alt_km * 1000 + 5_000_000),
+    destination: Cartesian3.fromDegrees(mid.lon_deg, mid.lat_deg, 3_000_000),
     duration: 2,
   });
 }
@@ -99,6 +116,10 @@ export function clearOrbit(viewer: Viewer) {
   if (orbitEntity) {
     viewer.entities.remove(orbitEntity);
     orbitEntity = undefined;
+  }
+  if (groundTrackEntity) {
+    viewer.entities.remove(groundTrackEntity);
+    groundTrackEntity = undefined;
   }
   if (satelliteEntity) {
     viewer.entities.remove(satelliteEntity);
