@@ -56,7 +56,7 @@ export default function App() {
   return (
     <div style={{ display: "flex", width: "100%", height: "100%" }}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <Globe ref={globeRef} onMarkerClick={handleMarkerClick} />
+        <Globe ref={globeRef} onMarkerClick={handleMarkerClick} drapedCount={drapedLayers.length} />
       </div>
       {panelOpen && (
         <ImagePanel
