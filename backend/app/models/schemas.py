@@ -33,3 +33,9 @@ class Acquisition(BaseModel):
 class AcquisitionsResponse(BaseModel):
     count: int
     acquisitions: list[Acquisition]
+
+
+class TileURLResponse(BaseModel):
+    item_id: str
+    tile_url_template: str
+    bbox: list[float]
