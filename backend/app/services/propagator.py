@@ -1,3 +1,5 @@
+"""SGP4 orbit propagator — converts TLE data into lat/lon/alt position arrays."""
+
 import math
 from datetime import datetime, timedelta, timezone
 
