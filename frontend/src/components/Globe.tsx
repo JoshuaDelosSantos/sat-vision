@@ -1,5 +1,12 @@
-import { useEffect, useRef } from "react";
-import { Viewer, Ion, OpenStreetMapImageryProvider } from "cesium";
+import { useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from "react";
+import {
+  Viewer,
+  Ion,
+  OpenStreetMapImageryProvider,
+  ScreenSpaceEventHandler,
+  ScreenSpaceEventType,
+  defined,
+} from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 import { useOrbit } from "../hooks/useOrbit";
 import { useAcquisitions } from "../hooks/useAcquisitions";
@@ -8,11 +15,23 @@ import {
   renderAcquisitionMarkers,
   clearAcquisitionMarkers,
 } from "./AcquisitionMarkers";
+import type { Acquisition } from "../services/api";
 
 // Suppress Ion token warning — we use free OSM tiles
 Ion.defaultAccessToken = "";
 
-export default function Globe() {
+export interface GlobeHandle {
+  getViewer: () => Viewer | null;
+}
+
+interface GlobeProps {
+  onMarkerClick?: (acquisition: Acquisition) => void;
+}
+
+const Globe = forwardRef<GlobeHandle, GlobeProps>(function Globe(
+  { onMarkerClick },
+  ref,
+) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Viewer | null>(null);
   const { orbit, error: orbitError, loading: orbitLoading } = useOrbit();
@@ -21,6 +40,10 @@ export default function Globe() {
     error: acqError,
     loading: acqLoading,
   } = useAcquisitions();
+
+  useImperativeHandle(ref, () => ({
+    getViewer: () => viewerRef.current,
+  }));
 
   // Initialise Cesium Viewer once
   useEffect(() => {
@@ -35,6 +58,8 @@ export default function Globe() {
       sceneModePicker: false,
       geocoder: false,
       baseLayer: false,
+      infoBox: false,
+      selectionIndicator: false,
     });
 
     viewerRef.current = viewer;
@@ -53,6 +78,36 @@ export default function Globe() {
       viewerRef.current = null;
     };
   }, []);
+
+  // Handle clicks on acquisition markers
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) return;
+
+    const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
+    handler.setInputAction((click: { position: { x: number; y: number } }) => {
+      const picked = viewer.scene.pick(click.position);
+      if (defined(picked) && picked.id && picked.id.properties) {
+        try {
+          const acqData = picked.id.properties.acquisitionData;
+          if (acqData) {
+            const value = acqData.getValue
+              ? acqData.getValue(viewer.clock.currentTime)
+              : acqData;
+            if (value && value.item_id) {
+              onMarkerClick?.(value as Acquisition);
+            }
+          }
+        } catch {
+          // Not an acquisition marker
+        }
+      }
+    }, ScreenSpaceEventType.LEFT_CLICK);
+
+    return () => {
+      handler.destroy();
+    };
+  }, [onMarkerClick]);
 
   // Render orbit data when it arrives
   useEffect(() => {
@@ -141,4 +196,6 @@ export default function Globe() {
       )}
     </div>
   );
-}
+});
+
+export default Globe;
