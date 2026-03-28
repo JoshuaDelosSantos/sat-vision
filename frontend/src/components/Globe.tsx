@@ -2,7 +2,12 @@ import { useEffect, useRef } from "react";
 import { Viewer, Ion, OpenStreetMapImageryProvider } from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 import { useOrbit } from "../hooks/useOrbit";
+import { useAcquisitions } from "../hooks/useAcquisitions";
 import { renderOrbit, clearOrbit } from "./OrbitRenderer";
+import {
+  renderAcquisitionMarkers,
+  clearAcquisitionMarkers,
+} from "./AcquisitionMarkers";
 
 // Suppress Ion token warning — we use free OSM tiles
 Ion.defaultAccessToken = "";
@@ -10,7 +15,12 @@ Ion.defaultAccessToken = "";
 export default function Globe() {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Viewer | null>(null);
-  const { orbit, error, loading } = useOrbit();
+  const { orbit, error: orbitError, loading: orbitLoading } = useOrbit();
+  const {
+    data: acqData,
+    error: acqError,
+    loading: acqLoading,
+  } = useAcquisitions();
 
   // Initialise Cesium Viewer once
   useEffect(() => {
@@ -59,6 +69,24 @@ export default function Globe() {
     };
   }, [orbit]);
 
+  // Render acquisition markers when data arrives
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) return;
+
+    if (acqData && acqData.acquisitions.length > 0) {
+      renderAcquisitionMarkers(viewer, acqData.acquisitions);
+    }
+    return () => {
+      if (viewer && !viewer.isDestroyed()) {
+        clearAcquisitionMarkers(viewer);
+      }
+    };
+  }, [acqData]);
+
+  const loading = orbitLoading || acqLoading;
+  const error = orbitError || acqError;
+
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
@@ -75,7 +103,7 @@ export default function Globe() {
             fontSize: 13,
           }}
         >
-          Loading orbit…
+          {orbitLoading ? "Loading orbit…" : "Loading acquisitions…"}
         </div>
       )}
       {error && (
@@ -92,6 +120,23 @@ export default function Globe() {
           }}
         >
           {error}
+        </div>
+      )}
+      {acqData && !acqLoading && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: 40,
+            left: 10,
+            background: "rgba(0,0,0,0.6)",
+            color: "white",
+            padding: "4px 10px",
+            borderRadius: 4,
+            fontSize: 12,
+          }}
+        >
+          {acqData.count} acquisition{acqData.count !== 1 ? "s" : ""} (last 30
+          days)
         </div>
       )}
     </div>
