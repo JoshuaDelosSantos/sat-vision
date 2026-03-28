@@ -1,11 +1,13 @@
-"""Imagery API — returns Sentinel-2 acquisition index with satellite positions."""
+"""Imagery API — returns Sentinel-2 acquisition index with satellite positions and tile URLs."""
 
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Query
+import pystac_client
+import planetary_computer
+from fastapi import APIRouter, HTTPException, Query
 
-from app.config import REGION_BBOX
-from app.models.schemas import Acquisition, AcquisitionsResponse
+from app.config import REGION_BBOX, STAC_API_URL, STAC_COLLECTION
+from app.models.schemas import Acquisition, AcquisitionsResponse, TileURLResponse
 from app.services.stac import fetch_acquisitions
 from app.services.propagator import propagate_at
 
@@ -47,3 +49,38 @@ def get_acquisitions(
         ))
 
     return AcquisitionsResponse(count=len(acquisitions), acquisitions=acquisitions)
+
+
+@router.get("/imagery/{item_id}/tile-url", response_model=TileURLResponse)
+def get_tile_url(item_id: str):
+    """Return a signed XYZ tile URL for a given STAC item."""
+    catalog = pystac_client.Client.open(
+        STAC_API_URL,
+        modifier=planetary_computer.sign_inplace,
+    )
+
+    try:
+        item = catalog.get_collection(STAC_COLLECTION).get_item(item_id)
+    except Exception:
+        item = None
+
+    if item is None:
+        raise HTTPException(status_code=404, detail=f"Item {item_id} not found")
+
+    # Planetary Computer provides a rendered tile endpoint via the 'tilejson' asset
+    # or we can construct it from the 'visual' / 'rendered_preview' assets.
+    # The simplest approach: use the item's tilejson rendering endpoint.
+    tile_url = (
+        f"https://planetarycomputer.microsoft.com/api/data/v1/"
+        f"item/tiles/WebMercatorQuad/{{z}}/{{x}}/{{y}}@1x"
+        f"?collection={STAC_COLLECTION}&item={item_id}"
+        f"&assets=visual&format=png"
+    )
+
+    bbox = list(item.bbox) if item.bbox else []
+
+    return TileURLResponse(
+        item_id=item_id,
+        tile_url_template=tile_url,
+        bbox=bbox,
+    )
