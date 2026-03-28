@@ -15,6 +15,7 @@ import {
   renderAcquisitionMarkers,
   clearAcquisitionMarkers,
 } from "./AcquisitionMarkers";
+import DashboardHUD from "./DashboardHUD";
 import type { Acquisition } from "../services/api";
 
 // Suppress Ion token warning — we use free OSM tiles
@@ -26,10 +27,11 @@ export interface GlobeHandle {
 
 interface GlobeProps {
   onMarkerClick?: (acquisition: Acquisition) => void;
+  drapedCount?: number;
 }
 
 const Globe = forwardRef<GlobeHandle, GlobeProps>(function Globe(
-  { onMarkerClick },
+  { onMarkerClick, drapedCount = 0 },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -142,20 +144,32 @@ const Globe = forwardRef<GlobeHandle, GlobeProps>(function Globe(
   const loading = orbitLoading || acqLoading;
   const error = orbitError || acqError;
 
+  const getViewer = useCallback(() => viewerRef.current, []);
+
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+
+      <DashboardHUD
+        getViewer={getViewer}
+        orbit={orbit}
+        acquisitions={acqData}
+        drapedCount={drapedCount}
+      />
+
       {loading && (
         <div
           style={{
             position: "absolute",
-            top: 10,
-            left: 10,
-            background: "rgba(0,0,0,0.6)",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            background: "rgba(0,0,0,0.7)",
             color: "white",
-            padding: "6px 12px",
-            borderRadius: 4,
+            padding: "10px 20px",
+            borderRadius: 6,
             fontSize: 13,
+            zIndex: 20,
           }}
         >
           {orbitLoading ? "Loading orbit…" : "Loading acquisitions…"}
@@ -166,32 +180,17 @@ const Globe = forwardRef<GlobeHandle, GlobeProps>(function Globe(
           style={{
             position: "absolute",
             top: 10,
-            left: 10,
-            background: "rgba(200,0,0,0.8)",
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "rgba(200,0,0,0.85)",
             color: "white",
-            padding: "6px 12px",
+            padding: "6px 16px",
             borderRadius: 4,
             fontSize: 13,
+            zIndex: 20,
           }}
         >
           {error}
-        </div>
-      )}
-      {acqData && !acqLoading && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: 40,
-            left: 10,
-            background: "rgba(0,0,0,0.6)",
-            color: "white",
-            padding: "4px 10px",
-            borderRadius: 4,
-            fontSize: 12,
-          }}
-        >
-          {acqData.count} acquisition{acqData.count !== 1 ? "s" : ""} (last 30
-          days)
         </div>
       )}
     </div>
