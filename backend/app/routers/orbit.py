@@ -1,3 +1,5 @@
+"""Orbit API — returns propagated satellite positions for a given time window."""
+
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Query
