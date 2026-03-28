@@ -34,6 +34,12 @@ export interface AcquisitionsData {
   acquisitions: Acquisition[];
 }
 
+export interface TileURLData {
+  item_id: string;
+  tile_url_template: string;
+  bbox: number[];
+}
+
 export async function fetchOrbit(
   centerIso?: string,
   windowMinutes = 100,
@@ -61,5 +67,11 @@ export async function fetchAcquisitions(
 
   const res = await fetch(`${API_BASE}/api/acquisitions?${params}`);
   if (!res.ok) throw new Error(`Acquisitions API error: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchTileUrl(itemId: string): Promise<TileURLData> {
+  const res = await fetch(`${API_BASE}/api/imagery/${encodeURIComponent(itemId)}/tile-url`);
+  if (!res.ok) throw new Error(`Tile URL API error: ${res.status}`);
   return res.json();
 }
