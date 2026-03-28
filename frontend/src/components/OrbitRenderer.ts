@@ -1,3 +1,5 @@
+/** Renders the orbit polyline and animated satellite marker on the Cesium viewer. */
+
 import {
   Viewer,
   Cartesian3,
