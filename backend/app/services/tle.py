@@ -1,3 +1,5 @@
+"""TLE fetcher — pulls Two-Line Element data from CelesTrak with 24h in-memory caching."""
+
 import time
 import httpx
 from app.config import TLE_URL, TLE_CACHE_TTL_SECONDS
